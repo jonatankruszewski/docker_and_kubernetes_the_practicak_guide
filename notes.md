@@ -234,3 +234,93 @@ You can add :ro to a volume to make it read only.
 
 Apis just work
 Host, replace localhost with host.docker.internal
+1 container per function (server, fe, db, etc.)
+
+### 73. Setting container together
+
+```sh
+docker container inspect <containerID>
+```
+
+Copy IPAdress when inspect
+
+paste in the server container code.
+
+Still, this is not elegant.
+
+### 74. Container networks
+
+You can put several containers in the same network by putting the option --network my_network to the docker run command
+
+```sh
+docker run --network my_network
+```
+
+Within a docker network all container can communicate with each other and IPs are automatically resolved.
+
+For example, running a node be with mongo
+First create network.
+
+```sh
+docker network create favorites-net
+docker run -d --name monbodb --network favorites-net mongo
+docker run --name favorites --network favorites-net -d --rm -p 3000:3000 favorites-node
+```
+
+once all containers are in the same network, inside the code, instead of using localhost or host.docker.internal, you can use the other docker container name.
+
+There other modes for network.
+
+### 79. Multi container apps
+
+Multiple service to one app
+multiple containers
+
+### 80. Target app
+
+DB - mongo container
+BE - node server
+FE - react
+
+
+### 81. Dockerizing a FS app, step 1
+
+```sh
+open -a docker
+docker container prune
+docker pull mongo
+docker pull node
+docker run --name mongoContainer --rm -d -p 27017:27017 mongo
+# create docker file for BE, update localhost to host.docker.internal
+docker build -t goals_be .
+docker run --name goals-backend -p 80:80 --rm  goals_be
+# create docker file for BE, update localhost to host.docker.internal
+docker build -t goals_fe .
+docker run --name goals-frontend -p 30000:3000 --rm goals_fe -it
+```
+
+### 84. with network
+
+```sh
+docker stop goals_fe goals_be mongoContainer
+docker network prune
+docker network create goals-net
+docker run --name mongoContainer --network goals-net --rm -d mongo
+# update dockerfile in the be, rebuild image.
+docker build -t goals_be .
+docker run --name goals-backend -p 80:80 --network goals-net --rm goals_be
+# update on the react app localhost to the goals-be image
+docker build -t goals_fe .
+docker run --name goals-frontend -p 3000:3000 --rm -it goals_fe
+```
+
+### with volumes
+
+```sh
+docker stop mongoContainer goals-backend
+docker run --name mongoContainer --network goals-net -v /Users/jkru/DATA/DEV/JK/Repos/Docker_and_Kubernetes_the_practical_guide/05.81_multi-01-starting-setup/mongo/data:/data/db --rm -d -e MONGO_INITDB_ROOT_USERNAME=max -e MONGO_INITDB_ROOT_PASSWORD=secret mongo
+#update mongodb URI with user:pass@ before the db container name in the BE and the ?authSource=admin at the end of the DB name
+docker build -t goals_be .
+docker run --name goals-backend -p 80:80 --network goals-net --rm goals_be
+
+```
